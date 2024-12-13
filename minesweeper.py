@@ -29,16 +29,16 @@ def showgrid(grid):
     horizontal = '   ' + (4 * gridsize * '-') + '-'
 
     # Print top column letters
-    toplabel = '     '
+    toplabel = '    '
 
-    for i in ascii_lowercase[:gridsize]:
-        toplabel = toplabel + i + '   '
+    for j in range(len(grid[0])):
+            toplabel = toplabel + ' ' + str(j) + '  '
 
     print(toplabel + '\n' + horizontal)
 
     # Print left row numbers
     for idx, i in enumerate(grid):
-        row = '{0:2} |'.format(idx + 1)
+        row = '{0:2} |'.format(idx)
 
         for j in i:
             row = row + ' ' + j + ' |'
@@ -189,6 +189,7 @@ def playgame():
         minesleft = numberofmines - len(flags)
         prompt = input('Enter the cell ({} mines left): '.format(minesleft))
         result = parseinput(prompt, gridsize, helpmessage + '\n')
+        print(result)
 
         message = result['message']
         cell = result['cell']
@@ -323,83 +324,245 @@ def playgame():
 #             if currgrid[row][col] == ' ' and (row, col) not in flags:
 #                 return {'cell': (row, col), 'flag': False}
 
+def is_subset(r1, r2) :
+    return r1[0].issubset(r2[0]) or r2[0].issubset(r1[0])
+
+def intersection(s1, s2) :
+    i1 = s1.difference(s2)
+    i2 = s2.difference(s1)
+    return i1 if len(i1) > len(i2) else i2
+
 def collect_constraints(grid) :
 
-    rules_related_to_tile = {}
-    rules = {}
+    rules = []
 
     for i in range(len(grid)) :
         for j in range(len(grid[i])) :
-            rules_related_to_tile[(i, j)] = []
-
-    for i in range(len(grid)) :
-        for j in range(len(grid[i])) :
-            if grid[i][j] != ' ' :
-                rule = [set(), grid[i][j]]
+            if grid[i][j] != ' ' and grid[i][j] != 'F' :
+                rule = [set(), int(grid[i][j])]
                 for i1 in range(i-1, i+2) :
                     if i1 >= 0 and i1 < len(grid) :
                         for j1 in range(j-1, j+2) :
                             if j1 >= 0 and j1 < len(grid[i]) :
                                 if grid[i1][j1] == ' ' :
                                     rule[0].add((i1, j1))
-                rules[(i, j)] = rule
-                for k in rule[0] :
-                    rules_related_to_tile[k].append(rule)
+                                if grid[i1][j1] == 'F' :
+                                    rule[1] = rule[1] - 1
+                if len(rule[0]) > 0 : 
+                    rules.append(rule)
 
-    return rules_related_to_tile, rules
-
-def is_subset(r1, r2) :
-    return r1[0].issubset(r2[0])
-
-def intersection(s1, s2) :
-    return s1.difference(s2)
-
-def remove_tile_from_rules(rules_by_tile, tile, rule, is_mine) :
-    for r in rules_by_tile[tile] :
-        if r != rule :
-            r[0].discard(tile)
-            r[1] = (r[1] - 1) if is_mine else r[1]
-    rules_by_tile[tile] = []
+    return rules
 
 def csp_ai_agent(grid) :
 
-    rules_by_tile, rules = collect_constraints(grid)
-    new_rules = []
-    
-    queue = []
+    rules = collect_constraints(grid)
+
     mines = []
     safe = []
 
-    for tile, rule in rules.items() :
-        queue.append((tile, rule))
-
-    while (len(queue) != 0) :
-        tile, rule = queue.pop(0)
-        if rule[1] == 0 :
-            for t in rule[0] :
-                safe.append(t)
-                remove_tile_from_rules(rules_by_tile, t, rule, False)
-        if rule[1] == len(rule[0]) :
-            for t in rule[0] :
-                mines.append(t)
-                remove_tile_from_rules(rules_by_tile, t, rule, True)
-        for r in rules_by_tile[tile] :
-            if (r != rule and is_subset(r, rule)) :
-                new_rule = [intersection(r[0], rule[0]), r[1] - rule[1]]
-                new_rules.append(new_rule)
-                for t in new_rule[0] :
-                    rules_by_tile[t].append(new_rule)
-                    for r1 in rules_by_tile[t] :
-                        queue.append(r1)
+    for rule1 in rules :
+        if rule1[1] == 0 :
+            for t in rule1[0] :
+                if t not in safe : safe.append(t)
+        if rule1[1] == len(rule1[0]) :
+            for t in rule1[0] :
+                if t not in mines : mines.append(t)
+        for rule2 in rules :
+            if rule1 != rule2 and is_subset(rule1, rule2) :
+                new_rule = [intersection(rule1[0], rule2[0]), max(rule1[1] - rule2[1], rule2[1] - rule1[1])]
+                if new_rule not in rules : rules.append(new_rule)
 
     return safe, mines
 
-gridsize = 10
+def play_game_with_agent():
+    gridsize = 9
+    numberofmines = 10
 
-currgrid = [[' ' for i in range(gridsize)] for i in range(gridsize)]
+    currgrid = [[' ' for i in range(gridsize)] for i in range(gridsize)]
 
-currgrid[0][0] = 2
-currgrid[0][1] = 2
-currgrid[0][2] = 3
+    grid = []
+    flags = []
+    starttime = 0
 
-print(csp_ai_agent(currgrid))
+    #helpmessage = ("Type the column followed by the row (eg. a5). "
+    #               "To put or remove a flag, add 'f' to the cell (eg. a5f).")
+
+    #print(helpmessage + " Type 'help' to show this message again.\n")
+
+    cell = (0,0)
+
+    if cell:
+        print('\n\n')
+        rowno, colno = cell
+        currcell = currgrid[rowno][colno]
+        flag = False
+
+        if not grid:
+            grid, mines = setupgrid(gridsize, cell, numberofmines)
+        if not starttime:
+            starttime = time.time()
+
+        if flag:
+            # Add a flag if the cell is empty
+            if currcell == ' ':
+                currgrid[rowno][colno] = 'F'
+                flags.append(cell)
+                    # Remove the flag if there is one
+            elif currcell == 'F':
+                currgrid[rowno][colno] = ' '
+                flags.remove(cell)
+                    #else:
+                        #message = 'Cannot put a flag there'
+
+                # If there is a flag there, show a message
+                #elif cell in flags:
+                    #message = 'There is a flag there'
+
+        elif grid[rowno][colno] == 'X':
+            print('Game Over\n')
+            showgrid(grid)
+            if playagain():
+                playgame()
+            return
+
+        elif currcell == ' ':
+            showcells(grid, currgrid, rowno, colno)
+
+                #else:
+                    #message = "That cell is already shown"
+
+        if set(flags) == set(mines):
+            minutes, seconds = divmod(int(time.time() - starttime), 60)
+            print(
+                'You Win. '
+                'It took you {} minutes and {} seconds.\n'.format(minutes,
+                                                                        seconds))
+            showgrid(grid)
+            if playagain():
+                playgame()
+            return
+    showgrid(currgrid)
+    while True:
+        minesleft = numberofmines - len(flags)
+        #prompt = input('Enter the cell ({} mines left): '.format(minesleft))
+        safe_input, mines_input = csp_ai_agent(currgrid)
+
+        if len(safe_input) == 0 and len(mines_input) == 0 : break
+
+        print("Safe:", safe_input)
+        print("Mines:", mines_input)
+
+        for i in safe_input :
+            
+            cell = i
+
+            if cell:
+                print('\n\n')
+                rowno, colno = cell
+                currcell = currgrid[rowno][colno]
+                flag = False
+
+                if not grid:
+                    grid, mines = setupgrid(gridsize, cell, numberofmines)
+                if not starttime:
+                    starttime = time.time()
+
+                if flag:
+                    # Add a flag if the cell is empty
+                    if currcell == ' ':
+                        currgrid[rowno][colno] = 'F'
+                        flags.append(cell)
+                    # Remove the flag if there is one
+                    elif currcell == 'F':
+                        currgrid[rowno][colno] = ' '
+                        flags.remove(cell)
+                    #else:
+                        #message = 'Cannot put a flag there'
+
+                # If there is a flag there, show a message
+                #elif cell in flags:
+                    #message = 'There is a flag there'
+
+                elif grid[rowno][colno] == 'X':
+                    print('Game Over\n')
+                    showgrid(grid)
+                    if playagain():
+                        playgame()
+                    return
+
+                elif currcell == ' ':
+                    showcells(grid, currgrid, rowno, colno)
+
+                #else:
+                    #message = "That cell is already shown"
+
+                if set(flags) == set(mines):
+                    minutes, seconds = divmod(int(time.time() - starttime), 60)
+                    print(
+                        'You Win. '
+                        'It took you {} minutes and {} seconds.\n'.format(minutes,
+                                                                        seconds))
+                    showgrid(grid)
+                    if playagain():
+                        playgame()
+                    return
+
+        for i in mines_input :
+            
+            cell = i
+
+            if cell:
+                print('\n\n')
+                rowno, colno = cell
+                currcell = currgrid[rowno][colno]
+                flag = True
+
+                if not grid:
+                    grid, mines = setupgrid(gridsize, cell, numberofmines)
+                if not starttime:
+                    starttime = time.time()
+
+                if flag:
+                    # Add a flag if the cell is empty
+                    if currcell == ' ':
+                        currgrid[rowno][colno] = 'F'
+                        flags.append(cell)
+                    # Remove the flag if there is one
+                    elif currcell == 'F':
+                        currgrid[rowno][colno] = ' '
+                        flags.remove(cell)
+                    else:
+                        message = 'Cannot put a flag there'
+
+                # If there is a flag there, show a message
+                elif cell in flags:
+                    message = 'There is a flag there'
+
+                elif grid[rowno][colno] == 'X':
+                    print('Game Over\n')
+                    showgrid(grid)
+                    if playagain():
+                        playgame()
+                    return
+
+                elif currcell == ' ':
+                    showcells(grid, currgrid, rowno, colno)
+
+                else:
+                    message = "That cell is already shown"
+
+                if set(flags) == set(mines):
+                    minutes, seconds = divmod(int(time.time() - starttime), 60)
+                    print(
+                        'You Win. '
+                        'It took you {} minutes and {} seconds.\n'.format(minutes,
+                                                                        seconds))
+                    showgrid(grid)
+                    if playagain():
+                        playgame()
+                    return
+
+        showgrid(currgrid)
+        #print(message)
+
+play_game_with_agent()

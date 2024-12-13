@@ -335,7 +335,7 @@ def collect_constraints(grid) :
     for i in range(len(grid)) :
         for j in range(len(grid[i])) :
             if grid[i][j] != ' ' :
-                rule = (set(), grid[i][j])
+                rule = [set(), grid[i][j]]
                 for i1 in range(i-1, i+2) :
                     if i1 >= 0 and i1 < len(grid) :
                         for j1 in range(j-1, j+2) :
@@ -357,11 +357,8 @@ def intersection(s1, s2) :
 def remove_tile_from_rules(rules_by_tile, tile, rule, is_mine) :
     for r in rules_by_tile[tile] :
         if r != rule :
-            print("Pre-Transform: ", r, is_mine)
-            tiles = r[0]
-            tiles.discard(tile)
-            r = (tiles, r[1] - 1 if is_mine else r[1])
-            print("Post-Transform: ", r)
+            r[0].discard(tile)
+            r[1] = (r[1] - 1) if is_mine else r[1]
     rules_by_tile[tile] = []
 
 def csp_ai_agent(grid) :
@@ -388,14 +385,14 @@ def csp_ai_agent(grid) :
                 remove_tile_from_rules(rules_by_tile, t, rule, True)
         for r in rules_by_tile[tile] :
             if (r != rule and is_subset(r, rule)) :
-                new_rule = (intersection(r[0], rule[0]), r[1] - rule[1])
+                new_rule = [intersection(r[0], rule[0]), r[1] - rule[1]]
                 new_rules.append(new_rule)
                 for t in new_rule[0] :
                     rules_by_tile[t].append(new_rule)
                     for r1 in rules_by_tile[t] :
                         queue.append(r1)
 
-    print(safe, mines)
+    return safe, mines
 
 gridsize = 10
 
@@ -405,4 +402,4 @@ currgrid[0][0] = 2
 currgrid[0][1] = 2
 currgrid[0][2] = 3
 
-csp_ai_agent(currgrid)
+print(csp_ai_agent(currgrid))

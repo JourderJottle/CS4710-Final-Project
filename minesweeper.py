@@ -406,8 +406,9 @@ def calculate_bayesian_probability(grid, currgrid, row, col):
     return posterior_prob
 
 def play_game_with_agent():
-    gridsize = 9
-    numberofmines = 10
+    gridsize = 10
+    numberofmines = (gridsize ** 2) // 8
+    print(numberofmines)
 
     currgrid = [[' ' for i in range(gridsize)] for i in range(gridsize)]
 

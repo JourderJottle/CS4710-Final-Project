@@ -373,6 +373,16 @@ def csp_ai_agent(grid) :
                 if new_rule not in rules : rules.append(new_rule)
 
     return safe, mines
+def bayesian_ai_agent(grid, currgrid):
+    probabilities = {}
+    for row in range(len(currgrid)):
+        for col in range(len(currgrid[row])):
+            if currgrid[row][col] == ' ':
+                mine_prob = calculate_bayesian_probability(grid, currgrid, row, col)
+                probabilities[(row, col)] = mine_prob
+    safest_cell = min(probabilities, key=probabilities.get)
+    return {'cell': safest_cell, 'flag': False}
+
 
 def play_game_with_agent():
     gridsize = 9

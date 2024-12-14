@@ -478,7 +478,12 @@ def play_game_with_agent():
         #prompt = input('Enter the cell ({} mines left): '.format(minesleft))
         safe_input, mines_input = csp_ai_agent(currgrid)
 
-        if len(safe_input) == 0 and len(mines_input) == 0 : break
+
+        if len(safe_input) == 0 and len(mines_input) == 0:
+            print("now using bayesian AI for guessing")
+            bayesian_move = bayesian_ai_agent(grid, currgrid)
+            safe_input.append(bayesian_move['cell'])
+
 
         print("Safe:", safe_input)
         print("Mines:", mines_input)

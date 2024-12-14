@@ -383,6 +383,27 @@ def bayesian_ai_agent(grid, currgrid):
     safest_cell = min(probabilities, key=probabilities.get)
     return {'cell': safest_cell, 'flag': False}
 
+def calculate_bayesian_probability(grid, currgrid, row, col):
+    neighbors = getneighbors(currgrid, row, col)
+    mine_count = 0
+    total_hidden = 0
+
+    
+    for r, c in neighbors:
+        if currgrid[r][c] == 'F':
+            mine_count += 1
+        elif currgrid[r][c] == ' ':  # hidden cells
+            total_hidden += 1
+    remaining_mines = sum(row.count(' ') for row in currgrid) - mine_count
+    remaining_hidden = sum(row.count(' ') for row in currgrid)
+
+
+    if remaining_hidden == 0:
+        return 1
+    prior_prob = remaining_mines / remaining_hidden
+    likelihood = (mine_count / len(neighbors)) if neighbors else 0
+    posterior_prob = prior_prob * likelihood
+    return posterior_prob
 
 def play_game_with_agent():
     gridsize = 9

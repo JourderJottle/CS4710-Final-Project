@@ -406,7 +406,7 @@ def calculate_bayesian_probability(grid, currgrid, row, col):
     return posterior_prob
 
 def play_game_with_agent():
-    gridsize = 10
+    gridsize = 20
     numberofmines = (gridsize ** 2) // 8
     print(numberofmines)
 
@@ -589,11 +589,13 @@ def play_game_with_agent():
                     message = "That cell is already shown"
 
                 if set(flags) == set(mines):
+                    elapsed_time = time.time() - starttime
                     minutes, seconds = divmod(int(time.time() - starttime), 60)
+                    milliseconds = int((elapsed_time - int(elapsed_time)) * 1000)
                     print(
                         'You Win. '
-                        'It took you {} minutes and {} seconds.\n'.format(minutes,
-                                                                        seconds))
+                        'It took you {} minutes and {} seconds and {} milliseconds.\n'.format(minutes,
+                                                                                              seconds, milliseconds))
                     showgrid(grid)
                     if playagain():
                         playgame()
